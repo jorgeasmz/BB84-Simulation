@@ -557,7 +557,7 @@ if menu == "🔬 Simulation":
             st.session_state.bob_sifted_key_str = sifted_key
         
         st.markdown(f"""
-        <div style="overflow-x: auto; white-space: pre; font-family: monospace; font-size: 13px; margin-bottom: 10px;">A-E Matching Bases : {st.session_state.alice_and_bob_matching_bases_str}
+        <div style="overflow-x: auto; white-space: pre; font-family: monospace; font-size: 1em; margin-bottom: 10px;">A-E Matching Bases : {st.session_state.alice_and_bob_matching_bases_str}
         Alice's Bits       : {st.session_state.alice_bits_str}
         Bob's Bits         : {st.session_state.bob_bits_str}
         Discarded Bits     : {st.session_state.discarded_bits_str}
