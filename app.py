@@ -444,12 +444,14 @@ if menu == "🔬 Simulation":
                 mode='matching')
         
             st.session_state.alice_and_bob_matching_bases_str = matching_bases
-        
-        st.text(f"""
-        Alice's Bases      : {st.session_state.alice_bases_str}
+
+
+        st.markdown(f"""
+        <div style="overflow-x: auto; white-space: pre; font-family: monospace; font-size: 13px; margin-bottom: 10px;">Alice's Bases      : {st.session_state.alice_bases_str}
         Bob's Bases        : {st.session_state.bob_bases_str}
         A-B Matching Bases : {st.session_state.alice_and_bob_matching_bases_str}
-        """)
+        </div>
+        """, unsafe_allow_html=True)
 
         guessed_bases_bob = len(st.session_state.alice_and_bob_matching_bases_str.replace('_', ''))
 
@@ -469,11 +471,12 @@ if menu == "🔬 Simulation":
 
             st.write(" ")
 
-            st.text(f"""
-            Alice's Bases      : {st.session_state.alice_bases_str}
+            st.markdown(f"""
+            <div style="overflow-x: auto; white-space: pre; font-family: monospace; font-size: 13px; margin-bottom: 10px;">Alice's Bases      : {st.session_state.alice_bases_str}
             Eve's Bases        : {st.session_state.eve_bases_str}
             A-E Matching Bases : {st.session_state.alice_and_eve_matching_bases_str}
-            """)
+            </div>
+            """, unsafe_allow_html=True)
 
             guessed_bases_eve = len(st.session_state.alice_and_eve_matching_bases_str.replace('_', ''))
 
@@ -504,10 +507,11 @@ if menu == "🔬 Simulation":
                 st.session_state.alice_and_eve_matching_bases_str,
                 mode='lucky')
 
-            st.text(f"""
-                    Error Bits         : {altered_qubits_string}
-                    Lucky Bits         : {lucky_qubits_string}
-                    """)
+            st.markdown(f"""
+            <div style="overflow-x: auto; white-space: pre; font-family: monospace; font-size: 13px; margin-bottom: 10px;">Error Bits         : {altered_qubits_string}
+            Lucky Bits         : {lucky_qubits_string}
+            </div>
+            """, unsafe_allow_html=True)
             
             st.text(f"""
                     Eve altered {altered_qubits} qubits (Eve guessed wrong and Bob guessed right).
@@ -523,7 +527,7 @@ if menu == "🔬 Simulation":
     # Sección 7: Sifted key
     if st.session_state.section >= 7:
 
-        st.write('#### Sifted key')
+        st.write("#### Sifted key")
 
         if 'discarded_bits_str' not in st.session_state: 
             
@@ -552,15 +556,15 @@ if menu == "🔬 Simulation":
         
             st.session_state.bob_sifted_key_str = sifted_key
         
-
-        st.code(f"""
-        A-E Matching Bases : {st.session_state.alice_and_bob_matching_bases_str}  
+        st.markdown(f"""
+        <div style="overflow-x: auto; white-space: pre; font-family: monospace; font-size: 13px; margin-bottom: 10px;">A-E Matching Bases : {st.session_state.alice_and_bob_matching_bases_str}
         Alice's Bits       : {st.session_state.alice_bits_str}
         Bob's Bits         : {st.session_state.bob_bits_str}
         Discarded Bits     : {st.session_state.discarded_bits_str}
         Alice's Sifted Key : {st.session_state.alice_sifted_key_str}
         Bob's Sifted Key   : {st.session_state.bob_sifted_key_str}
-        """, language='text')
+        </div>
+        """, unsafe_allow_html=True)
         
         percentages = ["10%", "20%", "30%"]
         selected_percentage = st.radio("Bit fraction to reveal", percentages)
@@ -597,10 +601,11 @@ if menu == "🔬 Simulation":
                 for i in range(len(st.session_state.bob_sifted_key_str))]
             )
         
-        st.text(f"""
-        Bob's Sifted Key : {st.session_state.bob_sifted_key_str}
+        st.markdown(f"""
+        <div style="overflow-x: auto; white-space: pre; font-family: monospace; font-size: 13px; margin-bottom: 10px;">Bob's Sifted Key : {st.session_state.bob_sifted_key_str}
         Revealed Bits    : {st.session_state.revealed_bits_str}
-        """)
+        </div>
+        """, unsafe_allow_html=True)
 
         revealed_bits_length = len(st.session_state.revealed_bits_str.replace(' ', ''))
 
@@ -630,12 +635,13 @@ if menu == "🔬 Simulation":
             st.session_state.alice_bits_str, 
             st.session_state.revealed_bits_str,
             mode='mixed_matching')
-        
-        st.text(f"""
-        Alice's Sifted Key : {st.session_state.alice_sifted_key_str}
+
+        st.markdown(f"""
+        <div style="overflow-x: auto; white-space: pre; font-family: monospace; font-size: 13px; margin-bottom: 10px;">Alice's Sifted Key : {st.session_state.alice_sifted_key_str}
         Revealed Bits      : {st.session_state.revealed_bits_str}
         Matching Bits      : {matching_bits}
-        """)
+        </div>
+        """, unsafe_allow_html=True)
 
         st.text(f"The Quantum Bit Error Rate is {st.session_state.QBER:.2%}")
 
@@ -665,12 +671,13 @@ if menu == "🔬 Simulation":
 
         final_key_length = len(st.session_state.final_key_str.replace(' ', ''))
 
-        # Mostrar la Sifted Key, los Revealed Bits y la Final Key    
-        st.text(f"""
-        Bob's Sifted Key : {st.session_state.bob_sifted_key_str}
+        # Mostrar la Sifted Key, los Revealed Bits y la Final Key
+        st.markdown(f"""
+        <div style="overflow-x: auto; white-space: pre; font-family: monospace; font-size: 13px; margin-bottom: 10px;">Bob's Sifted Key : {st.session_state.bob_sifted_key_str}
         Revealed Bits    : {st.session_state.revealed_bits_str}
         Final Key        : {st.session_state.final_key_str}
-        """)
+        </div>
+        """, unsafe_allow_html=True)
 
         st.text(f"The final key length is {final_key_length} bits.")
 
