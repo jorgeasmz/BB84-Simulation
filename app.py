@@ -1,220 +1,18 @@
-from qiskit import QuantumCircuit, transpile
-from qiskit.visualization import plot_bloch_vector
-from qiskit_aer import Aer
+from PIL import Image
+from functions import *
 
 import time
-import tempfile
 import streamlit as st
 import numpy as np
-import matplotlib.pyplot as plt
 
-
-def array_to_bit_string(array):
-    """Convert an array of bits into a bit string representation."""
-    return ''.join(str(bit) for bit in array)
-
-
-def bit_string_to_array(bit_string):
-    """Convert a bit string representation into an array of bits."""
-    return [int(bit) for bit in bit_string]
-
-
-@st.cache_data
-def generate_string(string_1, string_2, mode='matching'):
-    """Generates a string based on the mode parameter."""
-    if mode == 'matching':
-
-        return ''.join(['Y' if char_1 == char_2 else '_' for char_1, char_2 in zip(string_1, string_2)])
-    
-    elif mode == 'unmatching':
-
-        return ''.join(['X' if char_1 != char_2 else '_' for char_1, char_2 in zip(string_1, string_2)])
-    
-    elif mode == 'error':
-
-        return ''.join(['X' if char_1 == 'Y' and char_2 == '_' else '_' 
-                        for char_1, char_2 in zip(string_1, string_2)])
-    
-    elif mode == 'lucky':
-
-        return ''.join(['Y' if char_1 == 'Y' and char_2 == 'Y' else '_' 
-                        for char_1, char_2 in zip(string_1, string_2)])
-    
-    elif mode == 'mixed_matching':
-
-        matching_string = []
-        for char_1, char_2 in zip(string_1, string_2):
-            if char_1 == ' ' or char_2 == ' ':  # No se considera, es un espacio en blanco
-                matching_string.append('_')
-            elif char_1 == char_2:  # Coinciden los caracteres
-                matching_string.append('Y')
-            else:  # No coinciden los caracteres
-                matching_string.append('X')
-
-        return ''.join(matching_string)
-    
-    elif mode == 'sifted_key':
-
-        return ''.join([char_1 if char_2 == 'Y' else ' ' 
-                        for char_1, char_2 in zip(string_1, string_2)])
-    
-    else:
-
-        raise ValueError("Invalid mode. Choose from 'matching', 'unmatching', 'error', 'lucky', 'mixed_matching', or 'sifted_key'.")
-    
-
-def introduce_noise(bob_bits, error_rate):
-    """Introduce noise by flipping some of Bob's bits with a given error rate."""
-    noisy_bob_bits = []
-    for bit in bob_bits:
-        if np.random.rand() < error_rate:
-            noisy_bob_bits.append(1 - bit)  # Flip the bit to introduce an error
-        else:
-            noisy_bob_bits.append(bit)
-    return noisy_bob_bits
-
-
-@st.cache_resource
-def generate_bloch_figures():
-    # Definir los vectores de Bloch para cada estado
-    bloch_vectors = {
-        "|0⟩": [0, 0, 1],
-        "|1⟩": [0, 0, -1],
-        "|+⟩": [1, 0, 0],
-        "|−⟩": [-1, 0, 0]
-    }
-
-    # Crear un diccionario para almacenar las figuras
-    bloch_figures = {}
-
-    for state, vector in bloch_vectors.items():
-        fig = plot_bloch_vector(vector, figsize=(2, 2), font_size=10)
-        bloch_figures[state] = fig
-    
-    return bloch_figures
-
-
-def visualize_statistics(bob_bits, alice_sifted_key_str, bob_sifted_key_str, revealed_bits_indexes, error_rate):
-    """Visualize comprehensive statistics of the BB84 protocol and save relevant plots as images."""
-
-    # Lista para almacenar las rutas de las imágenes
-    image_paths = []
-
-    # Convertir las claves filtradas de string a listas de bits
-    sifted_keys = [(a, b) for a, b in zip(alice_sifted_key_str.replace(' ', ''), 
-                                          bob_sifted_key_str.replace(' ', ''))]
-    
-    compared_keys = [(alice_sifted_key_str[i], bob_sifted_key_str[i]) for i in revealed_bits_indexes]
-
-    # Gráfico de histograma de bits medidos por Bob
-    plt.figure(figsize=(6, 4))
-    hist, bins, patches = plt.hist(bob_bits, bins=2, edgecolor='black')
-    plt.xticks([0.25, 0.75], ['0', '1'])  # Centra las marcas de los ticks para los bits de Bob
-    plt.xlabel('Bob\'s Measured Bits')
-    plt.ylabel('Frequency')
-    plt.title(f'Histogram of Bob\'s Measured Bits')
-    plt.ylim(0, max(hist) * 1.2)
-
-    # Guardar la imagen temporalmente
-    temp_file_histogram = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    plt.savefig(temp_file_histogram.name)
-    plt.close()
-    image_paths.append(temp_file_histogram.name)
-
-    # Gráfico de tasa de error
-    plt.figure(figsize=(6, 4))
-    plt.plot(range(len(compared_keys)), [int(a != b) for a, b in compared_keys], 'ro-')
-    plt.xlabel('Key Index')
-    plt.ylabel('Error (1=Error, 0=Correct)')
-    plt.title(f'Error Rate')
-    plt.text(0.95, 0.95, f'Error Rate: {error_rate:.2%}',
-             verticalalignment='top', horizontalalignment='right',
-             transform=plt.gca().transAxes,
-             bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.5'))
-    
-    temp_file_error_rate = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    plt.savefig(temp_file_error_rate.name)
-    plt.close()
-    image_paths.append(temp_file_error_rate.name)
-
-    # Gráfico de tasa de acuerdo de las claves filtradas
-    plt.figure(figsize=(6, 4))
-    agreement = [int(a == b) for a, b in sifted_keys]
-    plt.bar(['Agree', 'Disagree'], [agreement.count(1), agreement.count(0)], color=['green', 'red'])
-    plt.ylabel('Count')
-    plt.title(f'Agreement Rate of Sifted Keys')
-    for i, value in enumerate([agreement.count(1), agreement.count(0)]):
-        plt.text(i, value, str(value), ha='center', va='bottom')
-    
-    temp_file_agreement = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    plt.savefig(temp_file_agreement.name)
-    plt.close()
-    image_paths.append(temp_file_agreement.name)
-
-    return image_paths
-
-
-def create_bb84_circuits(n, alice_bits, alice_bases, bob_bases, eve_bases=None, eve_present=False):
-    """Create a list of BB84 quantum circuits."""
-    circuits = []
-    for i in range(n):
-        qc = QuantumCircuit(1, 1)
-
-        # Alice's preparation
-        if alice_bits[i] == 1:
-            qc.x(0)
-        if alice_bases[i] == 1:
-            qc.h(0)
-        qc.barrier()
-
-        # Eve's eavesdropping
-        if eve_present:
-            if eve_bases[i] == 1:
-                qc.h(0)
-            qc.measure(0, 0)
-            qc.barrier()
-
-        # Bob's measurement
-        if bob_bases[i] == 1:
-            qc.h(0)
-        qc.measure(0, 0)
-
-        circuits.append(qc)
-
-    return circuits
-
-
-def quantum_transmission(n, alice_bits, alice_bases, bob_bases, eve_bases=None, eve_present=False, noisy_channel=False, shots=1024):
-
-    if eve_present:
-        circuits = create_bb84_circuits(n, alice_bits, alice_bases, bob_bases, eve_bases, eve_present=True)
-    else:
-        circuits = create_bb84_circuits(n, alice_bits, alice_bases, bob_bases, eve_bases)
-
-    simulator = Aer.get_backend('qasm_simulator')
-    transpiled_circuits = transpile(circuits, simulator)
-    results = simulator.run(transpiled_circuits, shots=shots).result()
-    counts = [results.get_counts(circ) for circ in circuits]
-
-    # Determine Bob's bit based on the majority vote
-    bob_bits = np.array([int(max(count, key=count.get)) for count in counts])
-
-    if noisy_channel:
-        bob_bits = introduce_noise(bob_bits, 0.1)
-
-    return bob_bits, counts
-
-
-#
 
 # Título de la aplicación
 st.title('BB84 Protocol')
 
-# Emojis y texto al inicio del sidebar
 st.sidebar.markdown("<h2>BB84 Protocol</h2>", unsafe_allow_html=True)
 st.sidebar.write("Explore a guided simulation of the BB84 protocol.")
 
-# Menú en la barra lateral con emojis
+# Menú en la barra lateral
 menu = st.sidebar.radio("Select an option", 
                         ["🔬 Simulation", 
                          "📚 About the protocol"])
@@ -242,7 +40,6 @@ st.sidebar.markdown(
     unsafe_allow_html=True
 )
 
-# Descripción según la opción seleccionada
 if menu == "🔬 Simulation":
 
     # Sección 0: Initial parameters
@@ -259,10 +56,20 @@ if menu == "🔬 Simulation":
 
     # Configuración basada en la selección
     noisy_channel = False
+    noise_percentage = 0
     eve_present = False
 
     if scenario == 'Noisy channel':
         noisy_channel = True
+
+        noise_percentage = st.slider(
+        "Amount of noise to simulate (%)",
+        min_value=0,
+        max_value=30,
+        value=10,
+        step=1,
+        format="%.1f%%")
+
     elif scenario == 'Eavesdropping':
         eve_present = True
 
@@ -406,7 +213,7 @@ if menu == "🔬 Simulation":
 
         if 'bob_bits_str' not in st.session_state:
             
-            bob_bits, _ = quantum_transmission(n, alice_bits, alice_bases, bob_bases, eve_bases=eve_bases, eve_present=eve_present, noisy_channel=noisy_channel)
+            bob_bits, _ = quantum_transmission(n, alice_bits, alice_bases, bob_bases, eve_bases=eve_bases, eve_present=eve_present, noisy_channel=noisy_channel, error_rate=noise_percentage)
 
             st.session_state.bob_bits_str = array_to_bit_string(bob_bits)
 
@@ -700,45 +507,76 @@ elif menu == "📚 About the protocol":
     A classical bit can be encoded in the polarization of a photon as shown in the Bit Encoding table. In the rectilinear basis, 0 is represented by horizontal polarization $(\ket{0})$, and 1 is represented by vertical polarization $(\ket{1})$. In the diagonal basis, 0 is represented with polarization at 45°, i.e. diagonal $(\ket{+})$, and 1 is represented with polarization at 135°, i.e. antidiagonal $(\ket{-})$.
     """)
 
-    # Generar y obtener las figuras de Bloch desde la caché
-    bloch_figures = generate_bloch_figures()
-
     # Crear una tabla en Streamlit
     st.write("#### Bit encoding")
 
-    # Definir las columnas de la tabla
-    col1, col2, col3 = st.columns([1, 1, 1])
+    bloch_0 = Image.open('images/bloch_0.png')
+    bloch_1 = Image.open('images/bloch_1.png')
+    bloch_p = Image.open('images/bloch_p.png')
+    bloch_m = Image.open('images/bloch_m.png')
 
-    # Encabezados de la tabla
-    with col1:
-        st.write("**Bit value**")
-    with col2:
-        st.write("**Rectilinear basis (0)**")
-    with col3:
-        st.write("**Diagonal basis (1)**")
+    table_html = """
+    <style>
+        .table-responsive {{
+            width: 100%;
+            max-width: 100%;
+            overflow-x: auto;
+            display: block;
+        }}
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+        }}
+        th, td {{
+            padding: 8px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }}
+        img {{
+            width: 125px;
+            min-width: 100px;
+            height: auto;
+        }}
+    </style>
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Bit value</th>
+                    <th>Rectilinear basis (0)</th>
+                    <th>Diagonal basis (1)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>0</td>
+                    <td><img src="data:image/png;base64,{img_0}" alt="|0⟩" /><br>|0⟩</td>
+                    <td><img src="data:image/png;base64,{img_plus}" alt="|+⟩" /><br>|+⟩</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td><img src="data:image/png;base64,{img_1}" alt="|1⟩" /><br>|1⟩</td>
+                    <td><img src="data:image/png;base64,{img_minus}" alt="|−⟩" /><br>|−⟩</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    """
 
-    # Primera fila: bit 0
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col1:
-        st.write("0")
-    with col2:
-        st.pyplot(bloch_figures["|0⟩"])
-        col2.markdown("$$|0⟩$$", unsafe_allow_html=True)
-    with col3:
-        st.pyplot(bloch_figures["|+⟩"])
-        col3.markdown("$$|+⟩$$", unsafe_allow_html=True)
+    # Convertir las imágenes cargadas a base64
+    img_0_base64 = pil_to_base64(bloch_0)
+    img_1_base64 = pil_to_base64(bloch_1)
+    img_plus_base64 = pil_to_base64(bloch_p)
+    img_minus_base64 = pil_to_base64(bloch_m)
 
-    # Segunda fila: bit 1
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col1:
-        st.write("1")
-    with col2:
-        st.pyplot(bloch_figures["|1⟩"])
-        col2.markdown("$$|1⟩$$", unsafe_allow_html=True)
-    with col3:
-        st.pyplot(bloch_figures["|−⟩"])
-        col3.markdown("$$|−⟩$$", unsafe_allow_html=True)
+    table_html = table_html.format(
+    img_0=img_0_base64,
+    img_1=img_1_base64,
+    img_plus=img_plus_base64,
+    img_minus=img_minus_base64
+    )
 
+    st.markdown(table_html, unsafe_allow_html=True)
 
     st.markdown("""
                 
@@ -748,60 +586,115 @@ elif menu == "📚 About the protocol":
 
     """)
 
-
     st.write("#### Bit decoding")
 
-    # Definir las columnas de la tabla
-    col1, col2, col3 = st.columns([1, 1, 1])
+    table_html = """
+    <style>
+        .table-responsive {{
+            width: 100px;
+            max-width: 100%;
+            min-width: 400px;
+            overflow-x: auto;
+            display: block;
+        }}
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+        }}
+        th, td {{
+            padding: 8px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }}
+    </style>
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Measured state</th>
+                    <th>Rectilinear basis (|0⟩, |1⟩)</th>
+                    <th>Diagonal basis (|+⟩, |−⟩)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>|0⟩</td>
+                    <td>
+                        |0⟩<br/>
+                        Result: 0
+                    </td>
+                    <td>
+                        1/√2 [|+⟩ + |−⟩]<br/>
+                        Result: Random (0 or 1)
+                    </td>
+                </tr>
+                <tr>
+                    <td>|1⟩</td>
+                    <td>
+                        |1⟩<br/>
+                        Result: 1
+                    </td>
+                    <td>
+                        1/√2 [|+⟩ - |−⟩]<br/>
+                        Result: Random (0 or 1)
+                    </td>
+                </tr>
+                <tr>
+                    <td>|+⟩</td>
+                    <td>
+                        1/√2 [|0⟩ + |1⟩]<br/>
+                        Result: Random (0 or 1)
+                    </td>
+                    <td>
+                        |+⟩<br/>
+                        Result: 0
+                    </td>
+                </tr>
+                <tr>
+                    <td>|−⟩</td>
+                    <td>
+                        1/√2 [|0⟩ - |1⟩]<br/>
+                        Result: Random (0 or 1)
+                    </td>
+                    <td>
+                        |−⟩<br/>
+                        Result: 1
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    """
 
-    # Encabezados de la tabla
-    with col1:
-        st.write("**Measured state**")
-    with col2:
-        st.write("**Rectilinear basis (|0⟩, |1⟩)**")
-    with col3:
-        st.write("**Diagonal basis (|+⟩, |−⟩)**")
+    st.markdown(table_html, unsafe_allow_html=True)
 
-    # Primera fila: estado medido |0⟩
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col1:
-        st.write("$$|0⟩$$")
-    with col2:
-        st.markdown("$$|0⟩$$", unsafe_allow_html=True)
-        st.markdown("Result: 0")
-    with col3:
-        st.markdown("$$\\frac{1}{\\sqrt{2}}|+⟩ + \\frac{1}{\\sqrt{2}}|−⟩$$", unsafe_allow_html=True)
-        st.markdown("Result: Random (0 or 1)")
+    st.write("#### Steps of the protocol")
 
-    # Segunda fila: estado medido |1⟩
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col1:
-        st.write("$$|1⟩$$")
-    with col2:
-        st.markdown("$$|1⟩$$", unsafe_allow_html=True)
-        st.markdown("Result: 1")
-    with col3:
-        st.markdown("$$\\frac{1}{\\sqrt{2}}|+⟩ - \\frac{1}{\\sqrt{2}}|−⟩$$", unsafe_allow_html=True)
-        st.markdown("Result: Random (0 or 1)")
+    st.markdown("""
+                
+    The protocol consists of two stages: The first is quantum transmission, in which Alice and Bob prepare, send, and measure quantum states. The second stage is classical postprocessing. During this stage, Alice and Bob communicate only through the classical channel to convert the previously obtained bit sequences into secure keys.
+                
+    """)
 
-    # Tercera fila: estado medido |+⟩
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col1:
-        st.write("$$|+⟩$$")
-    with col2:
-        st.markdown("$$\\frac{1}{\\sqrt{2}}|0⟩ + \\frac{1}{\\sqrt{2}}|1⟩$$", unsafe_allow_html=True)
-        st.markdown("Result: Random (0 or 1)")
-    with col3:
-        st.markdown("$$|+⟩$$", unsafe_allow_html=True)
-        st.markdown("Result: 0")
+    st.write("##### Quantum transmission")
 
-    # Cuarta fila: estado medido |−⟩
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col1:
-        st.write("$$|−⟩$$")
-    with col2:
-        st.markdown("$$\\frac{1}{\\sqrt{2}}|0⟩ - \\frac{1}{\\sqrt{2}}|1⟩$$", unsafe_allow_html=True)
-        st.markdown("Result: Random (0 or 1)")
-    with col3:
-        st.markdown("$$|−⟩$$", unsafe_allow_html=True)
-        st.markdown("Result: 1")
+    st.markdown("""
+                
+    1. Alice chooses a string of $n$ random classical bits $X_1, ..., X_n$.
+    2. Alice selects a random sequence of polarization bases, choosing between the rectilinear base $(0)$ or the diagonal base $(1)$. These are conjugate bases, meaning that a measurement in one of the bases provides no information about a bit encoded in the other base.
+    3. Alice encodes her bit sequence into a sequence of polarized photons according to the selected bases, as shown in the Bit Encoding table.
+    4. Bob receives the photons and randomly decides (independently of Alice) for each photon whether to measure it in the rectilinear base or the diagonal base. At this point, both Alice and Bob have a sequence of classical bits, denoted as $X = (X_1, ..., X_n)$ for Alice and $Y = (Y_1, ..., Y_n)$ for Bob.
+         
+    """)
+
+    st.write("##### Classical post-processing")
+
+    st.markdown("""
+    
+    5. Bob makes public the information about the bases he used to measure the photons sent by Alice.
+    6. Alice compares these bases with those she used in the preparation process and informs Bob which of his choices matched correctly. Then, both discard all bits where the encoding and measurement bases do not match.
+    7. Alice and Bob calculate the error rate in the quantum channel, i.e., the proportion of positions where $X_i$ and $Y_i$ do not match. To do this, Bob randomly reveals some bits of his key. If Eve has not interfered, these bits should match Alice's, and she verifies them. If the error rate is too high, this suggests the presence of Eve, and Alice and Bob abort the protocol. The bits revealed in this step are discarded.
+    8. The remaining bits form the shared key.
+
+    """)
+    
