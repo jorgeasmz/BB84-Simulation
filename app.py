@@ -502,7 +502,7 @@ elif menu == "📚 About the protocol":
     st.markdown("""
     In 1984, **Charles Bennett** and **Gilles Brassard** developed the first quantum key distribution protocol, called BB84, which uses classical bit coding in qubits generated from photon polarization.
 
-    The polarization of light describes the oscillation orientation of the electromagnetic field associated with its wave. In the case of linear polarization, this oscillation occurs in only one direction. Linear polarization states can be described by two bases: the rectilinear base, which includes horizontal and vertical orientations, and the diagonal base, which includes orientations rotated at 45° and 135°.
+    The polarization of light describes the oscillation orientation of the electromagnetic field associated with its wave. In the case of linear polarization, this oscillation occurs in only one direction. Linear polarization states can be described by two bases: the rectilinear basis, which includes horizontal and vertical orientations, and the diagonal basis, which includes orientations rotated at 45° and 135°.
                 
     A classical bit can be encoded in the polarization of a photon as shown in the Bit Encoding table. In the rectilinear basis, 0 is represented by horizontal polarization $(\ket{0})$, and 1 is represented by vertical polarization $(\ket{1})$. In the diagonal basis, 0 is represented with polarization at 45°, i.e. diagonal $(\ket{+})$, and 1 is represented with polarization at 135°, i.e. antidiagonal $(\ket{-})$.
     """)
