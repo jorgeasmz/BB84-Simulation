@@ -189,6 +189,40 @@ def create_bb84_circuits(n, alice_bits, alice_bases, bob_bases, eve_bases=None, 
     return circuits
 
 
+def create_bb84_circuits_with_decoy(n, alice_bits, alice_bases, bob_bases, decoy_states, eve_bases=None, eve_present=False):
+    """Create a list of BB84 quantum circuits with decoy states."""
+    circuits = []
+    for i in range(n):
+        qc = QuantumCircuit(1, 1)
+
+        # Alice's preparation
+        if decoy_states[i] == 1:
+            # Prepare a decoy state (e.g., |+⟩ or |−⟩)
+            qc.h(0)
+        else:
+            if alice_bits[i] == 1:
+                qc.x(0)
+            if alice_bases[i] == 1:
+                qc.h(0)
+        qc.barrier()
+
+        # Eve's eavesdropping
+        if eve_present:
+            if eve_bases[i] == 1:
+                qc.h(0)
+            qc.measure(0, 0)
+            qc.barrier()
+
+        # Bob's measurement
+        if bob_bases[i] == 1:
+            qc.h(0)
+        qc.measure(0, 0)
+
+        circuits.append(qc)
+
+    return circuits
+
+
 def quantum_transmission(n, alice_bits, alice_bases, bob_bases, eve_bases=None, eve_present=False, noisy_channel=False, error_rate=10, shots=1024):
 
     if eve_present:
@@ -208,3 +242,8 @@ def quantum_transmission(n, alice_bits, alice_bases, bob_bases, eve_bases=None, 
         bob_bits = introduce_noise(bob_bits, error_rate/100)
 
     return bob_bits, counts
+
+
+def generate_decoy_states(n, decoy_probability=0.1):
+    """Generate a list of decoy states with a given probability."""
+    return np.random.choice([0, 1], size=n, p=[1-decoy_probability, decoy_probability])
