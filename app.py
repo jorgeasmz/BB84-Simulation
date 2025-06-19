@@ -494,7 +494,7 @@ if menu == "🔬 Simulation":
         image_index = st.slider("Simulation review", 0, len(image_paths) - 1, 0)
 
         # Mostrar la imagen seleccionada
-        st.image(image_paths[image_index], use_column_width=True)
+        st.image(image_paths[image_index], use_container_width=True)
 
 
 elif menu == "📚 About the protocol":
